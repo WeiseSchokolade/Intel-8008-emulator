@@ -1,7 +1,6 @@
 package de.schoko.pseudoassembly;
 
 public class BinaryExecutor {
-	private short programCounter = 0;
 	private byte[] registers = {
 			0, // A
 			0, // B
@@ -12,6 +11,8 @@ public class BinaryExecutor {
 			0  // L / Low
 	};
 	private byte[] memory = new byte[65536];
+	private short[] programCounterStack = new short[8];
+	private int currentCounter = 0;
 	
 	private boolean halted;
 	private boolean carry;
@@ -24,10 +25,9 @@ public class BinaryExecutor {
 	private byte[] outputs = new byte[24];
 	
 	public void step() {
-		System.out.println(programCounter);
 		if (halted) return;
-		byte opcode = memory[programCounter];
-		programCounter++;
+		byte opcode = memory[programCounterStack[currentCounter]];
+		programCounterStack[currentCounter]++;
 		
 		if (opcode == -1 || opcode == 0 || opcode == 1) {
 			// HALT
@@ -42,10 +42,11 @@ public class BinaryExecutor {
 			outputs[port] = registers[0];
 		} else if ((opcode & -57) == 68) {/* 01xxx100*/ 
 			// Jump
-			byte lowByte = memory[programCounter];
-			byte highByte = memory[programCounter + 1];
-			programCounter = (short) (lowByte + highByte * 256);
+			byte lowByte = memory[programCounterStack[currentCounter]];
+			byte highByte = memory[programCounterStack[currentCounter] + 1];
+			programCounterStack[currentCounter] = (short) (lowByte + highByte * 256);
 		} else if ((opcode & -57) == 64) {/* 01xxx000*/
+			// Jump if condition
 			boolean condition = switch (isolateNumber(opcode, 3, 3)) {
 				case 0 -> !carry; // carry = 0
 				case 1 -> !zero; // result != 0
@@ -57,14 +58,72 @@ public class BinaryExecutor {
 				case 7 -> parityEven; // parity = even
 			default -> throw new IllegalArgumentException("Unknown jump condition: " + isolateNumber(opcode, 3, 3));
 			};
-			// Jump if carry = 0
 			if (condition) {
-				byte lowByte = memory[programCounter];
-				byte highByte = memory[programCounter + 1];
-				programCounter = (short) (lowByte + highByte * 256);
+				byte lowByte = memory[programCounterStack[currentCounter]];
+				byte highByte = memory[programCounterStack[currentCounter] + 1];
+				programCounterStack[currentCounter] = (short) (lowByte + highByte * 256);
 			} else {
-				programCounter += 2;
+				programCounterStack[currentCounter] += 2;
 			}
+		} else if ((opcode & -57) == 70) {
+			// Call
+			byte lowByte = memory[programCounterStack[currentCounter]];
+			byte highByte = memory[programCounterStack[currentCounter] + 1];
+			currentCounter = (currentCounter + 1) % programCounterStack.length;
+			programCounterStack[currentCounter] = (short) (lowByte + highByte * 256);
+		} else if ((opcode & -57) == 66) {/* 01xxx010*/
+			// Call if condition
+			boolean condition = switch (isolateNumber(opcode, 3, 3)) {
+				case 0 -> !carry; // carry = 0
+				case 1 -> !zero; // result != 0
+				case 2 -> !negative; // sign = 0
+				case 3 -> !parityEven; // parity = odd
+				case 4 -> carry; // carry = 1
+				case 5 -> zero; // result = 0
+				case 6 -> negative; // sign = 1
+				case 7 -> parityEven; // parity = even
+			default -> throw new IllegalArgumentException("Unknown call condition: " + isolateNumber(opcode, 3, 3));
+			};
+			if (condition) {
+				byte lowByte = memory[programCounterStack[currentCounter]];
+				byte highByte = memory[programCounterStack[currentCounter] + 1];
+				currentCounter = (currentCounter + 1) % programCounterStack.length;
+				programCounterStack[currentCounter] = (short) (lowByte + highByte * 256);
+			} else {
+				programCounterStack[currentCounter] += 2;
+			}
+		} else if ((opcode & -57) == 7) {
+			// Return
+			byte lowByte = memory[programCounterStack[currentCounter]];
+			byte highByte = memory[programCounterStack[currentCounter] + 1];
+			currentCounter = (currentCounter + programCounterStack.length - 1) % programCounterStack.length;
+			programCounterStack[currentCounter] = (short) (lowByte + highByte * 256);
+		} else if ((opcode & -57) == 3) {/* 00xxx011*/
+			// Return if condition
+			boolean condition = switch (isolateNumber(opcode, 3, 3)) {
+				case 0 -> !carry; // carry = 0
+				case 1 -> !zero; // result != 0
+				case 2 -> !negative; // sign = 0
+				case 3 -> !parityEven; // parity = odd
+				case 4 -> carry; // carry = 1
+				case 5 -> zero; // result = 0
+				case 6 -> negative; // sign = 1
+				case 7 -> parityEven; // parity = even
+			default -> throw new IllegalArgumentException("Unknown return condition: " + isolateNumber(opcode, 3, 3));
+			};
+			if (condition) {
+				byte lowByte = memory[programCounterStack[currentCounter]];
+				byte highByte = memory[programCounterStack[currentCounter] + 1];
+				currentCounter = (currentCounter + programCounterStack.length - 1) % programCounterStack.length;
+				programCounterStack[currentCounter] = (short) (lowByte + highByte * 256);
+			} else {
+				programCounterStack[currentCounter] += 2;
+			}
+		} else if ((opcode & -57) == 5) {/* 00AAA101*/
+			// Call subroutine at AAA000
+			int addr = isolateNumber(opcode, 3, 3) << 16;
+			currentCounter = (currentCounter + 1) % programCounterStack.length;
+			programCounterStack[currentCounter] = (short) (addr);
 		} else if ((opcode & -64) == -64) {/* 11xxxxxx */
 			// Load from/into register/memory address
 			int toAddress = isolateNumber(opcode, 3, 3);
@@ -73,8 +132,8 @@ public class BinaryExecutor {
 		} else if ((opcode & -57) == 6) {/* 00xxx110*/
 			// Load register/memory address with the following data
 			int toAddress = isolateNumber(opcode, 3, 3);
-			set(toAddress, memory[programCounter]);
-			programCounter++;
+			set(toAddress, memory[programCounterStack[currentCounter]]);
+			programCounterStack[currentCounter]++;
 		} else if ((opcode & -64) == -128) {/* 10xxxxxx */
 			int operation = isolateNumber(opcode, 3, 3);
 			byte a = registers[0];
@@ -85,8 +144,8 @@ public class BinaryExecutor {
 			// Immediate ALU
 			int operation = isolateNumber(opcode, 3, 3);
 			byte a = registers[0];
-			byte b = memory[programCounter];
-			programCounter++;
+			byte b = memory[programCounterStack[currentCounter]];
+			programCounterStack[currentCounter]++;
 			
 			stepALU(operation, a, b);
 		} else if ((opcode & -57) == 0 && (opcode & 56) != 56) {
@@ -105,7 +164,22 @@ public class BinaryExecutor {
 			}
 		} else if (opcode == 2) {/* 00000010 */
 			// Rotate A left
+			carry = (registers[0] & (byte) -128) != 0;
 			registers[0] <<= 1;
+		} else if (opcode == 10) {
+			// Rotate A right
+			carry = (registers[0] & 1) != 0;
+			registers[0] >>= 1;
+		} else if (opcode == 18) {
+			byte result = (byte) (carry ? 1 : 0);
+			result += (registers[0] << 1);
+			carry = (registers[0] & (byte) -128) != 0;
+			registers[0] = result;
+		} else if (opcode == 26) {
+			byte result = (byte) (carry ? -128 : 0);
+			result += (registers[0] >> 1);
+			carry = (registers[0] & 1) != 0;
+			registers[0] = result;
 		} else {
 			System.err.println("Unknown instruction: " + opcode);
 		}

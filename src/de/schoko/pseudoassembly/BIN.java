@@ -49,6 +49,82 @@ public final class BIN {
 		return VAL(120);
 	}
 	
+	public static BinaryValue CALL() {
+		return VAL(70);
+	}
+
+	public static BinaryValue CNC() {
+		return VAL(66);
+	}
+
+	public static BinaryValue CNZ() {
+		return VAL(74);
+	}
+
+	public static BinaryValue CP() {
+		return VAL(82);
+	}
+	
+	public static BinaryValue CPO() {
+		return VAL(90);
+	}
+
+	public static BinaryValue CC() {
+		return VAL(98);
+	}
+
+	public static BinaryValue CZ() {
+		return VAL(106);
+	}
+
+	public static BinaryValue CM() {
+		return VAL(114);
+	}
+	
+	public static BinaryValue CPE() {
+		return VAL(122);
+	}
+
+	public static BinaryValue RET() {
+		return VAL(7);
+	}
+	
+	public static BinaryValue RNC() {
+		return VAL(3);
+	}
+	
+	public static BinaryValue RNZ() {
+		return VAL(11);
+	}
+	
+	public static BinaryValue RP() {
+		return VAL(19);
+	}
+	
+	public static BinaryValue RPO() {
+		return VAL(27);
+	}
+	
+	public static BinaryValue RC() {
+		return VAL(35);
+	}
+	
+	public static BinaryValue RZ() {
+		return VAL(43);
+	}
+	
+	public static BinaryValue RM() {
+		return VAL(51);
+	}
+	
+	public static BinaryValue RPE() {
+		return VAL(59);
+	}
+
+	public static BinaryValue RST(int location) {
+		return VAL((location << 3) + 5);
+	}
+	
 	public static BinaryValue MOV(RegisterLocation from, RegisterLocation to) {
 		return VAL((3 << 6) + (to.getLocation() << 3) + from.getLocation());
 	}
@@ -128,7 +204,20 @@ public final class BIN {
 	public static BinaryValue DEC(RegisterLocation register) {
 		return VAL((register.getLocation() << 3) + 1);
 	}
+	
 	public static BinaryValue RLC() {
 		return VAL(2);
+	}
+	
+	public static BinaryValue RRC() {
+		return VAL(10);
+	}
+	
+	public static BinaryValue RAL() {
+		return VAL(18);
+	}
+	
+	public static BinaryValue RAR() {
+		return VAL(26);
 	}
 }
