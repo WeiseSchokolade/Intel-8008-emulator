@@ -1,4 +1,4 @@
-package de.schoko.pseudoassembly;
+package de.schoko.intel8008emulator;
 
 public enum RegisterLocation {
 	A(0),

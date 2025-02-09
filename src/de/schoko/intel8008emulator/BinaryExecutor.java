@@ -1,4 +1,4 @@
-package de.schoko.pseudoassembly;
+package de.schoko.intel8008emulator;
 
 public class BinaryExecutor {
 	private byte[] registers = {
@@ -16,7 +16,6 @@ public class BinaryExecutor {
 	
 	private boolean halted;
 	private boolean carry;
-	private boolean overflow;
 	private boolean zero;
 	private boolean parityEven;
 	private boolean negative;
@@ -27,6 +26,7 @@ public class BinaryExecutor {
 	public void step() {
 		if (halted) return;
 		byte opcode = memory[programCounterStack[currentCounter]];
+		compressedStepDump(opcode);
 		programCounterStack[currentCounter]++;
 		
 		if (opcode == -1 || opcode == 0 || opcode == 1) {
@@ -65,10 +65,11 @@ public class BinaryExecutor {
 			} else {
 				programCounterStack[currentCounter] += 2;
 			}
-		} else if ((opcode & -57) == 70) {
+		} else if ((opcode & -57) == 70) { /* 01xxx110 */
 			// Call
 			byte lowByte = memory[programCounterStack[currentCounter]];
 			byte highByte = memory[programCounterStack[currentCounter] + 1];
+			programCounterStack[currentCounter] += 2;
 			currentCounter = (currentCounter + 1) % programCounterStack.length;
 			programCounterStack[currentCounter] = (short) (lowByte + highByte * 256);
 		} else if ((opcode & -57) == 66) {/* 01xxx010*/
@@ -87,6 +88,7 @@ public class BinaryExecutor {
 			if (condition) {
 				byte lowByte = memory[programCounterStack[currentCounter]];
 				byte highByte = memory[programCounterStack[currentCounter] + 1];
+				programCounterStack[currentCounter] += 2;
 				currentCounter = (currentCounter + 1) % programCounterStack.length;
 				programCounterStack[currentCounter] = (short) (lowByte + highByte * 256);
 			} else {
@@ -94,10 +96,7 @@ public class BinaryExecutor {
 			}
 		} else if ((opcode & -57) == 7) {
 			// Return
-			byte lowByte = memory[programCounterStack[currentCounter]];
-			byte highByte = memory[programCounterStack[currentCounter] + 1];
 			currentCounter = (currentCounter + programCounterStack.length - 1) % programCounterStack.length;
-			programCounterStack[currentCounter] = (short) (lowByte + highByte * 256);
 		} else if ((opcode & -57) == 3) {/* 00xxx011*/
 			// Return if condition
 			boolean condition = switch (isolateNumber(opcode, 3, 3)) {
@@ -112,12 +111,7 @@ public class BinaryExecutor {
 			default -> throw new IllegalArgumentException("Unknown return condition: " + isolateNumber(opcode, 3, 3));
 			};
 			if (condition) {
-				byte lowByte = memory[programCounterStack[currentCounter]];
-				byte highByte = memory[programCounterStack[currentCounter] + 1];
 				currentCounter = (currentCounter + programCounterStack.length - 1) % programCounterStack.length;
-				programCounterStack[currentCounter] = (short) (lowByte + highByte * 256);
-			} else {
-				programCounterStack[currentCounter] += 2;
 			}
 		} else if ((opcode & -57) == 5) {/* 00AAA101*/
 			// Call subroutine at AAA000
@@ -191,35 +185,24 @@ public class BinaryExecutor {
 		switch (operation) {
 		case 0: // Add
 			result = a + b;
-			overflow = (result > 127);
-			carry = overflow;
-			if (overflow) {
-				result -= 256;
-			}
+			carry = (result & 0x100) > 0;
+			result &= 0xFF;
 			break;
 		case 1: // Add with carry
 			result = a + b + (carry ? 1 : 0);
-			overflow = (result > 127);
-			carry = overflow;
-			if (overflow) {
-				result -= 256;
-			}
+			carry = (result & 0x100) > 0;
+			result &= 0xFF;
 			break;
 		case 2: // Sub
-			result = a - b;
-			overflow = (result < -128);
-			carry = !((a > b) ^ (b < 0) ^ (a < 0));
-			if (overflow) {
-				result += 256;
-			}
+			//carry = !((a > b) ^ (b < 0) ^ (a < 0));
+			result = a + (b ^ 0xFF) + 1;
+			carry = (result & 0x100) == 0;
+			result &= 0xFF;
 			break;
 		case 3: // Sub with carry
-			result = a - b - (carry ? 1 : 0);
-			overflow = (result < -128);
-			carry = !((a > b) ^ (b < 0) ^ (a < 0));
-			if (overflow) {
-				result += 256;
-			}
+			result = a + (b ^ 0xFF) + (carry ? 0 : 1);
+			carry = (result & 0x100) == 0;
+			result &= 0xFF;
 			break;
 		case 4: // Bitwise And
 			result = a & b;
@@ -231,14 +214,11 @@ public class BinaryExecutor {
 			result = a | b;
 			break;
 		case 7: // Compare
-			result = a - b;
-			overflow = (result < -128);
-			carry = !((a > b) ^ (b < 0) ^ (a < 0));
-			if (overflow) {
-				result += 256;
-			}
+			result = a + ((b & 0xFF) ^ 0xFF) + 1;
+			carry = (result & 0x100) == 0;
+			result &= 0xFF;
 			zero = (result == 0);
-			negative = (result < 0);
+			negative = (result & 0x80) == 0x80;
 			
 			int parityValue = result ^ (result >> 1);
 			parityValue = parityValue ^ (parityValue >> 2);
@@ -250,7 +230,7 @@ public class BinaryExecutor {
 			System.out.println("Unknown math operation: " + operation);
 		}
 		zero = (result == 0);
-		negative = (result < 0);
+		negative = (result & 0x80) == 0x80;
 		
 		int parityValue = result ^ (result >> 1);
 		parityValue = parityValue ^ (parityValue >> 2);
@@ -316,6 +296,34 @@ public class BinaryExecutor {
 			System.out.println(" " + RegisterLocation.values()[i].name() + " - " + padBinaryInt(registers[i], 8));
 		}
 	}
+
+	public void dumpStack() {
+		System.out.println("=== PC STACK DUMP ===");
+		System.out.println("PC ID - PC");
+		for (int i = 0; i < programCounterStack.length; i++) {
+			System.out.println(" " + i + " - " + padHexInt(programCounterStack[i], 6));
+		}
+	}
+
+	private void compressedStepDump(byte opcode) {
+		System.out.println("PC " + padHexInt(programCounterStack[currentCounter], 2) + " - Depth " + currentCounter + " Opcode " + padBinaryInt(Byte.toUnsignedInt(opcode), 8));
+	}
+	
+	@SuppressWarnings("unused")
+	private void dumpOpcode(byte opcode) {
+		System.out.println("=== OPCODE DUMP ===");
+		System.out.println("Stack depth: " + currentCounter);
+		System.out.println("PC: " + Integer.toHexString(programCounterStack[currentCounter]));
+		System.out.println("Opcode: " + padBinaryInt(Byte.toUnsignedInt(opcode), 8));
+	}
+	
+	public void dumpALU() {
+		System.out.println("=== ALU DUMP ===");
+		System.out.println("Carry: " + carry);
+		System.out.println("Zero: " + zero);
+		System.out.println("Negative: " + negative);
+		System.out.println("Parity: " + parityEven);
+	}
 	
 	public static String padInt(int number, int length) {
 		return String.format("%1$" + length + "s", "" + number).replace(' ', '0');
@@ -326,7 +334,7 @@ public class BinaryExecutor {
 	}
 
 	public static String padBinaryInt(int number, int length) {
-		return String.format("%1$" + length + "s", "" + Integer.toBinaryString(number).toUpperCase()).replace(' ', '0');
+		return String.format("%1$" + length + "s", "" + Integer.toBinaryString(number & 0xFF).toUpperCase()).replace(' ', '0');
 	}
 	
 	public static int isolateNumber(int bite, int offset, int bitAmount) {
@@ -353,5 +361,9 @@ public class BinaryExecutor {
 	
 	public boolean isHalted() {
 		return halted;
+	}
+	
+	public byte[] getRegisters() {
+		return registers;
 	}
 }

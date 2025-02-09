@@ -1,4 +1,4 @@
-package de.schoko.pseudoassembly;
+package de.schoko.intel8008emulator;
 
 public final class BIN {
 	public static BinaryValue VAL(byte b) {
@@ -125,8 +125,8 @@ public final class BIN {
 		return VAL((location << 3) + 5);
 	}
 	
-	public static BinaryValue MOV(RegisterLocation from, RegisterLocation to) {
-		return VAL((3 << 6) + (to.getLocation() << 3) + from.getLocation());
+	public static BinaryValue MOV(RegisterLocation destination, RegisterLocation source) {
+		return VAL((3 << 6) + (destination.getLocation() << 3) + source.getLocation());
 	}
 	
 	public static BinaryValue MVI(RegisterLocation to) {

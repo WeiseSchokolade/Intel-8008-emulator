@@ -1,9 +1,14 @@
-package de.schoko.pseudoassembly;
+package de.schoko.intel8008emulator.examples;
 
-import static de.schoko.pseudoassembly.RegisterLocation.*;
+import static de.schoko.intel8008emulator.RegisterLocation.A;
+import static de.schoko.intel8008emulator.RegisterLocation.H;
+import static de.schoko.intel8008emulator.RegisterLocation.L;
+import static de.schoko.intel8008emulator.RegisterLocation.M;
 
-public class PseudoAssembly {
+import de.schoko.intel8008emulator.BIN;
+import de.schoko.intel8008emulator.BinaryExecutor;
 
+public class Addition {
 	public static void main(String[] args) {
 		BinaryExecutor executor = new BinaryExecutor();
 		executor.fillMemory(
@@ -15,30 +20,10 @@ public class PseudoAssembly {
 				BIN.VAL(0x5),
 				BIN.ADI(),
 				BIN.VAL(0xD),
-				BIN.MOV(A, M),
+				BIN.MOV(M, A),
 				BIN.VAL(-1)
 				);
-		executor.fillMemory(
-				BIN.MVI(H),
-				BIN.VAL(0),
-				BIN.MVI(L),
-				BIN.VAL(20),
-				BIN.MVI(A),
-				BIN.VAL(5),
-				BIN.CPI(),
-				BIN.VAL(0),
-				BIN.JZ(),
-				BIN.VAL(0),
-				BIN.VAL(40),
-				BIN.MOV(A, M),
-				BIN.SUI(),
-				BIN.VAL(1),
-				BIN.INR(L),
-				BIN.JMP(),
-				BIN.VAL(6),
-				BIN.VAL(0),
-				BIN.VAL(-1)
-				);
+
 		int steps = 0;
 		int overflow = 10000;
 		while (!executor.isHalted() && steps < overflow) {
@@ -59,5 +44,4 @@ public class PseudoAssembly {
 		executor.dump(32);
 		executor.dumpRegisters();
 	}
-
 }

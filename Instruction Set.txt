@@ -1,0 +1,52 @@
+Instructions:
+
+HLT - Halt all executions
+
+0100MMM1 - IN  - Read input
+01RRMMM1 - OUT - Write output
+
+01xxx100 - JMP - Jump unconditionally
+01ccc000 - Jcc - Jump if condition
+01xxx110 - CALL- Call subroutine unconditionally
+01ccc010 - Ccc - Call if condition
+00AAA101 - RST - Call subroutine at address AAA000
+00xxx111 - RET - Return unconditionally
+00ccc011 - Rcc - Return if condition
+
+11dddsss - MOV - Load d with s
+11ddd111 - MOV - Load d with M
+11111sss - MOV - Load M with s
+00ddd110 - MVI - Load d with following data
+00111110 - MVI - Load M with following data
+
+10ooosss - Apply operation with s to A
+10ooo111 - Apply operation with M to A
+00ooo100 - Apply operation with following data to A
+
+00ddd000 - Incremenet register d
+00ddd001 - Decrement register d
+
+00000010 - RLC - Rotate A left
+00001010 - RRC - Rotate A right
+00010010 - RAL - Rotate A left through carry
+00011010 - RAR - Rotate A right through carry
+
+ccc: conditions
+000 - NC - carry = 0
+001 - NZ - result != 0
+010 - P  - sign = 0 (positive)
+011 - PO - parity = odd
+100 - C  - carry = 1
+101 - Z  - result = 0
+110 - M  - sign = 1 (negative)
+111 - PE - parity = even
+
+ooo: operation
+000 - Add
+001 - Add carry
+010 - Sub
+011 - Sub carry
+100 - And
+101 - Xor
+110 - Or
+111 - Compare
