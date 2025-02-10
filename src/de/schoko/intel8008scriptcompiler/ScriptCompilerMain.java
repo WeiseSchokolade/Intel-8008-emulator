@@ -2,15 +2,17 @@ package de.schoko.intel8008scriptcompiler;
 
 import java.util.List;
 
-import de.schoko.intel8008scriptcompiler.statements.Statement;
-
 public class ScriptCompilerMain {
 	public static void main(String[] args) {
-		Compiler compiler = new Compiler();
+		CompilerFrontend compiler = new CompilerFrontend();
 		List<Token> tokens = compiler.tokenize("""
-		var c = 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10;
+				global a;
+				
+				subroutine main() {
+					a = 3 + 5;
+				}
 				""");
-		List<Statement> statements = compiler.parseStatements(tokens, List.of());
-		System.out.println(statements);
+		ParseResult parseResult = compiler.parseSubroutines(tokens);
+		System.out.println(parseResult);
 	}
 }

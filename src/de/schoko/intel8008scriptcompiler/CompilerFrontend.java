@@ -3,7 +3,6 @@ package de.schoko.intel8008scriptcompiler;
 import java.util.ArrayList;
 import java.util.List;
 
-import de.schoko.intel8008assembler.Subroutine;
 import de.schoko.intel8008scriptcompiler.expression.BiExpression;
 import de.schoko.intel8008scriptcompiler.expression.Expression;
 import de.schoko.intel8008scriptcompiler.expression.LiteralExpression;
@@ -13,24 +12,61 @@ import de.schoko.intel8008scriptcompiler.statements.AssignmentStatement;
 import de.schoko.intel8008scriptcompiler.statements.Statement;
 import de.schoko.intel8008scriptcompiler.statements.VariableReference;
 
-public class Compiler {
-	
-	List<Subroutine> parseSubroutines(List<Token> tokens) {
+public class CompilerFrontend {
+	ParseResult parseSubroutines(List<Token> tokens) {
 		for (int i = 0; i < tokens.size(); i++) {
 			if (tokens.get(i).type() == TokenType.COMMENT) {
 				tokens.remove(i);
 				i--;
 			}
 		}
+		List<Subroutine> subroutines = new ArrayList<>();
 		int tokenIndex = 0;
+		List<VariableReference> globalVariables = new ArrayList<>();
+		while (tokenIndex < tokens.size()) {
+			Token token = tokens.get(tokenIndex++);
+			if (token.type() == TokenType.GLOBAL_KEYWORD) {
+				globalVariables.add(new VariableReference(assertType(tokens.get(tokenIndex++), TokenType.IDENTIFIER)));
+				assertType(tokens.get(tokenIndex++), TokenType.STATEMENT_SEPARATOR);
+			} else {
+				tokenIndex--;
+				break;
+			}
+		}
 		while (tokenIndex < tokens.size()) {
 			Token token = tokens.get(tokenIndex++);
 			assertType(token, TokenType.SUBROUTINE_KEYWORD);
 			Token identifier = assertType(tokens.get(tokenIndex++), TokenType.IDENTIFIER);
 			assertType(tokens.get(tokenIndex++), TokenType.OPEN_EXPRESSION_BRACKET);
-			// TODO: Implement subroutine parser that accepts parameters
+			List<VariableReference> parameters = new ArrayList<>();
+			if (tokens.get(tokenIndex).type() == TokenType.IDENTIFIER) {
+				for (; tokenIndex < tokens.size(); tokenIndex++) {
+					parameters.add(new VariableReference(tokens.get(tokenIndex++)));
+					if (tokens.get(tokenIndex).type() == TokenType.CLOSE_EXPRESSION_BRACKET) {
+						break;
+					}
+					assertType(tokens.get(tokenIndex), TokenType.PARAMETER_SEPARATOR);
+				}
+			}
+			assertType(tokens.get(tokenIndex++), TokenType.CLOSE_EXPRESSION_BRACKET);
+			assertType(tokens.get(tokenIndex++), TokenType.OPEN_STATEMENT_BRACKET);
+
+			List<Token> statementTokens = new ArrayList<>();
+			int openBrackets = 1;
+			for (; tokenIndex < tokens.size(); tokenIndex++) {
+				token = tokens.get(tokenIndex);
+				if (token.type() == TokenType.OPEN_STATEMENT_BRACKET) openBrackets++;
+				if (token.type() == TokenType.CLOSE_STATEMENT_BRACKET) openBrackets--;
+				statementTokens.add(token);
+				if (openBrackets == 0) break;
+			}
+			assertType(tokens.get(tokenIndex++), TokenType.CLOSE_STATEMENT_BRACKET);
+			List<VariableReference> scopedVariables = new ArrayList<>(globalVariables);
+			scopedVariables.addAll(parameters);
+			List<Statement> statements = parseStatements(statementTokens, scopedVariables);
+			subroutines.add(new Subroutine(identifier, parameters, statements));
 		}
-		return null;
+		return new ParseResult(globalVariables, subroutines, new ArrayList<>());
 	}
 	
 	List<Statement> parseStatements(List<Token> tokens, List<VariableReference> outsideReferences) {
@@ -54,7 +90,7 @@ public class Compiler {
 				VariableReference reference = null;
 				for (int i = 0; i < references.size(); i++) {
 					reference = references.get(i);
-					if (reference.name().equals(token.value())) break;
+					if (reference.identifier().value().equals(token.value())) break;
 				}
 				if (reference == null) throw new IllegalArgumentException("Unknown variable reference: " + reference);
 				List<Token> expressionTokens = new ArrayList<>();
@@ -83,7 +119,7 @@ public class Compiler {
 			case IDENTIFIER:
 				for (int i = 0; i < references.size(); i++) {
 					VariableReference reference = references.get(i);
-					if (reference.name().equals(token.value())) {
+					if (reference.identifier().value().equals(token.value())) {
 						return new VariableExpression(reference);
 					}
 				}
@@ -133,7 +169,6 @@ public class Compiler {
 			}
 		}
 		return new BiExpression(leftHandExpression, operator, rightHandExpression, false);
-		
 	}
 
 	List<Token> tokenize(String program) {

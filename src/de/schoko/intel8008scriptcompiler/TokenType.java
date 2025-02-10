@@ -3,6 +3,7 @@ package de.schoko.intel8008scriptcompiler;
 public enum TokenType {
 	SUBROUTINE_KEYWORD("subroutine"),
 	VARIABLE_KEYWORD("var"),
+	GLOBAL_KEYWORD("global"),
 	PARAMETER_SEPARATOR(","),
 	STATEMENT_SEPARATOR(";"),
 	IDENTIFIER("[a-zA-Z_][a-zA-Z0-9_]*"),
