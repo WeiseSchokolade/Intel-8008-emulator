@@ -32,6 +32,17 @@ HLT - Halt all executions
 00010010 - RAL - Rotate A left through carry
 00011010 - RAR - Rotate A right through carry
 
+ddd: destination register
+sss: source register
+000 - A - Accumulator
+001 - B
+010 - C
+011 - D
+100 - E
+101 - H
+110 - L
+111 - M
+
 ccc: conditions
 000 - NC - carry = 0
 001 - NZ - result != 0
