@@ -3,6 +3,7 @@ package de.schoko.intel8008scriptcompiler;
 public enum TokenType {
 	SUBROUTINE_KEYWORD("subroutine"),
 	IF_KEYWORD("if"),
+	WHILE_KEYWORD("while"),
 	OUTPUT_KEYWORD("output"),
 	VARIABLE_KEYWORD("var"),
 	PARAMETER_SEPARATOR(","),

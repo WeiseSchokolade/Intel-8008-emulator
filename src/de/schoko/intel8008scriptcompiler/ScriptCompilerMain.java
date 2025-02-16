@@ -10,9 +10,10 @@ public class ScriptCompilerMain {
 	public static void main(String[] args) {
 		FrontEnd compiler = new FrontEnd();
 		List<Token> tokens = compiler.tokenize("""
-				var a = 3;
-				if (a == (2 + 1)) {
-					a = 5;
+				var a = 1;
+				while (a == 1) {
+					a = a + 1;
+					output a;
 				}
 				output a;
 				""");

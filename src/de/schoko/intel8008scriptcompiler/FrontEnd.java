@@ -14,6 +14,7 @@ import de.schoko.intel8008scriptcompiler.statements.IfStatement;
 import de.schoko.intel8008scriptcompiler.statements.OutputStatement;
 import de.schoko.intel8008scriptcompiler.statements.Statement;
 import de.schoko.intel8008scriptcompiler.statements.VariableReference;
+import de.schoko.intel8008scriptcompiler.statements.WhileStatement;
 
 public class FrontEnd {
 	
@@ -91,6 +92,45 @@ public class FrontEnd {
 				}
 				List<Statement> conditionedStatements = parseStatements(conditionedTokens, references);
 				statements.add(new IfStatement(conditionExpression, conditionedStatements));
+			}
+			if (token.type() == TokenType.WHILE_KEYWORD) {
+				assertType(tokens.get(tokenIndex++), TokenType.OPEN_EXPRESSION_BRACKET);
+				int openBrackets = 1;
+				List<Token> expressionTokens = new ArrayList<>();
+				for (; tokenIndex < tokens.size(); tokenIndex++) {
+					token = tokens.get(tokenIndex);
+					if (token.type() == TokenType.OPEN_EXPRESSION_BRACKET) {
+						openBrackets++;
+					}
+					if (token.type() == TokenType.CLOSE_EXPRESSION_BRACKET) {
+						openBrackets--;
+					}
+					if (openBrackets == 0) {
+						tokenIndex++;
+						break;
+					}
+					expressionTokens.add(token);
+				}
+				BooleanBiExpression conditionExpression = parseBooleanExpression(expressionTokens, references);
+				assertType(tokens.get(tokenIndex++), TokenType.OPEN_STATEMENT_BRACKET);
+				List<Token> conditionedTokens = new ArrayList<>();
+				openBrackets = 1;
+				for (; tokenIndex < tokens.size(); tokenIndex++) {
+					token = tokens.get(tokenIndex);
+					if (token.type() == TokenType.OPEN_STATEMENT_BRACKET) {
+						openBrackets++;
+					}
+					if (token.type() == TokenType.CLOSE_STATEMENT_BRACKET) {
+						openBrackets--;
+					}
+					if (openBrackets == 0) {
+						tokenIndex++;
+						break;
+					}
+					conditionedTokens.add(token);
+				}
+				List<Statement> conditionedStatements = parseStatements(conditionedTokens, references);
+				statements.add(new WhileStatement(conditionExpression, conditionedStatements));
 			}
 			if (token.type() == TokenType.OUTPUT_KEYWORD) {
 				List<Token> expressionTokens = new ArrayList<>();
