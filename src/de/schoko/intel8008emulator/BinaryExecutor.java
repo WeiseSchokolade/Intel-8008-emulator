@@ -23,6 +23,8 @@ public class BinaryExecutor {
 	private byte[] inputs = new byte[8];
 	private byte[] outputs = new byte[24];
 	
+	private OutputListener outputListener;
+	
 	public void step() {
 		if (halted) return;
 		byte opcode = memory[programCounterStack[currentCounter]];
@@ -40,6 +42,9 @@ public class BinaryExecutor {
 			// Output
 			int port = isolateNumber(opcode, 1, 5) - 8;
 			outputs[port] = registers[0];
+			if (outputListener != null) {
+				outputListener.handleOutput(registers[0], port);
+			}
 		} else if ((opcode & -57) == 68) {/* 01xxx100*/ 
 			// Jump
 			byte lowByte = memory[programCounterStack[currentCounter]];
@@ -365,5 +370,9 @@ public class BinaryExecutor {
 	
 	public byte[] getRegisters() {
 		return registers;
+	}
+	
+	public void setOutputListener(OutputListener outputListener) {
+		this.outputListener = outputListener;
 	}
 }

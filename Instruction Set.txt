@@ -1,4 +1,5 @@
 Instructions:
+Little endian
 
 HLT - Halt all executions
 

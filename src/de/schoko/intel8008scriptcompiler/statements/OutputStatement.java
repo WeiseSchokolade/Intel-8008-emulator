@@ -1,27 +1,30 @@
 package de.schoko.intel8008scriptcompiler.statements;
 
+import java.util.List;
+
+import de.schoko.intel8008emulator.BIN;
+import de.schoko.intel8008emulator.RegisterLocation;
 import de.schoko.intel8008scriptcompiler.GenerationContext;
 import de.schoko.intel8008scriptcompiler.Variable;
 import de.schoko.intel8008scriptcompiler.expression.Expression;
 
-public class AssignmentStatement extends Statement {
-	private VariableReference reference;
+public class OutputStatement extends Statement {
 	private Expression value;
 
-	public AssignmentStatement(VariableReference reference, Expression value) {
-		this.reference = reference;
+	public OutputStatement(Expression value) {
 		this.value = value;
 	}
 	
 	@Override
 	public void generate(GenerationContext context) {
-		Variable variable = context.getVariable(reference);
+		Variable variable = context.allocateVariable();
 		context.associateNextInstructionConstructor(this);
 		value.generate(context, variable);
-	}
-	
-	public VariableReference getReference() {
-		return reference;
+		variable.generateWriteAddressToHL(context);
+		context.addInstructionConstructor(() -> () -> List.of(
+				BIN.MOV(RegisterLocation.A, RegisterLocation.M),
+				BIN.OUT(0)
+				));
 	}
 	
 	public Expression getValue() {
@@ -30,6 +33,6 @@ public class AssignmentStatement extends Statement {
 
 	@Override
 	public String toString() {
-		return "AssignmentStatement[reference=" + reference + ", value=" + value + "]";
+		return "OutputStatement[value=" + value + "]";
 	}
 }

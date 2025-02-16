@@ -13,10 +13,22 @@ public final class BIN {
 		return VAL(0);
 	}
 	
+	public static BinaryValue IN(int port) {
+		return VAL(65 + (port << 1));
+	}
+
+	public static BinaryValue OUT(int port) {
+		return VAL(65 + ((port + 8) << 1));
+	}
+	
 	public static BinaryValue JMP() {
 		return VAL(68);
 	}
 
+	public static BinaryValue JCC(Condition condition) {
+		return VAL(64 + (condition.getCondition() << 3));
+	}
+	
 	public static BinaryValue JNC() {
 		return VAL(64);
 	}
@@ -53,6 +65,10 @@ public final class BIN {
 		return VAL(70);
 	}
 
+	public static BinaryValue CCC(Condition condition) {
+		return VAL(64 + (condition.getCondition() << 3) + 2);
+	}
+	
 	public static BinaryValue CNC() {
 		return VAL(66);
 	}
@@ -87,6 +103,10 @@ public final class BIN {
 
 	public static BinaryValue RET() {
 		return VAL(7);
+	}
+
+	public static BinaryValue RCC(Condition condition) {
+		return VAL((condition.getCondition() << 3) + 3);
 	}
 	
 	public static BinaryValue RNC() {
