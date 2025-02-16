@@ -1,8 +1,6 @@
 package de.schoko.intel8008emulator;
 
-import static org.junit.jupiter.api.Assertions.*;
-
-import java.io.PrintStream;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
